@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DACA Replication Results</title>
+<style>
+  :root {
+    --bg: #f5f6fa;
+    --surface: #ffffff;
+    --border: #dde1e8;
+    --text: #1a1a2e;
+    --text2: #555;
+    --accent1: #2563eb;
+    --accent1-bg: #eff6ff;
+    --accent2: #059669;
+    --accent2-bg: #ecfdf5;
+    --accent3: #7c3aed;
+    --accent3-bg: #f5f3ff;
+    --hover: #f0f2f8;
+    --active: #e0e4ef;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.5;
+  }
+  header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 16px 24px; position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  header h1 { font-size: 20px; font-weight: 700; }
+  header p { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .layout { display: flex; height: calc(100vh - 73px); }
+  .sidebar {
+    width: 300px; min-width: 260px; background: var(--surface);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .task-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .task-tab {
+    flex: 1; padding: 10px 8px; text-align: center; cursor: pointer;
+    font-size: 13px; font-weight: 600; border: none; background: none;
+    color: var(--text2); transition: all 0.15s;
+    border-bottom: 2px solid transparent;
+  }
+  .task-tab:hover { background: var(--hover); }
+  .task-tab.active { color: var(--accent1); border-bottom-color: var(--accent1); }
+  .search-box {
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+  }
+  .search-box input {
+    width: 100%; padding: 7px 10px; border: 1px solid var(--border);
+    border-radius: var(--radius); font-size: 13px; outline: none;
+  }
+  .search-box input:focus { border-color: var(--accent1); }
+  .rep-list {
+    flex: 1; overflow-y: auto; padding: 4px 0;
+  }
+  .rep-item {
+    padding: 8px 14px; cursor: pointer; font-size: 13px;
+    display: flex; align-items: center; gap: 8px;
+    transition: background 0.1s; border-left: 3px solid transparent;
+  }
+  .rep-item:hover { background: var(--hover); }
+  .rep-item.active { background: var(--active); border-left-color: var(--accent1); }
+  .rep-item .rep-num { font-weight: 600; min-width: 32px; }
+  .rep-item .rep-badges { display: flex; gap: 4px; margin-left: auto; }
+  .badge {
+    font-size: 10px; padding: 1px 6px; border-radius: 10px;
+    font-weight: 600; text-transform: uppercase;
+  }
+  .badge-pdf { background: var(--accent1-bg); color: var(--accent1); }
+  .badge-log { background: var(--accent2-bg); color: var(--accent2); }
+  .badge-code { background: var(--accent3-bg); color: var(--accent3); }
+
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .file-tabs {
+    display: flex; gap: 0; background: var(--surface);
+    border-bottom: 1px solid var(--border); padding: 0 16px;
+    min-height: 42px; align-items: flex-end;
+  }
+  .file-tab {
+    padding: 8px 16px; cursor: pointer; font-size: 13px; font-weight: 500;
+    border: 1px solid transparent; border-bottom: none; background: none;
+    color: var(--text2); border-radius: var(--radius) var(--radius) 0 0;
+    transition: all 0.15s; position: relative; top: 1px;
+  }
+  .file-tab:hover { background: var(--hover); }
+  .file-tab.active {
+    background: var(--surface); color: var(--text);
+    border-color: var(--border); border-bottom: 1px solid var(--surface);
+    font-weight: 600;
+  }
+  .viewer {
+    flex: 1; overflow: hidden; background: var(--surface);
+  }
+  .viewer iframe {
+    width: 100%; height: 100%; border: none;
+  }
+  .viewer pre {
+    margin: 0; padding: 20px; overflow: auto; height: 100%;
+    font-size: 13px; line-height: 1.6; font-family: 'Consolas', 'Monaco', monospace;
+    white-space: pre-wrap; word-wrap: break-word; background: #fafbfc;
+  }
+  .viewer .placeholder {
+    display: flex; align-items: center; justify-content: center;
+    height: 100%; color: var(--text2); font-size: 15px; flex-direction: column; gap: 8px;
+  }
+  .placeholder svg { opacity: 0.3; }
+  .code-file-selector {
+    padding: 8px 16px; background: #f8f9fb; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px; font-size: 13px;
+  }
+  .code-file-selector select {
+    padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px;
+    font-size: 13px; background: white;
+  }
+  .loading { text-align: center; padding: 40px; color: var(--text2); }
+
+  .download-link {
+    font-size: 12px; margin-left: 8px; color: var(--accent1);
+    text-decoration: none; opacity: 0.7;
+  }
+  .download-link:hover { opacity: 1; text-decoration: underline; }
+</style>
+</head>
+<body>
+<header>
+  <h1>DACA Replication Results</h1>
+  <p>Browse replication reports, run logs, and analysis code across 3 tasks (100 replications each)</p>
+</header>
+<div class="layout">
+  <div class="sidebar">
+    <div class="task-tabs" id="taskTabs"></div>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Filter replications...">
+    </div>
+    <div class="rep-list" id="repList">
+      <div class="loading">Loading...</div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="file-tabs" id="fileTabs"></div>
+    <div id="codeSelector" class="code-file-selector" style="display:none;">
+      <label>File:</label>
+      <select id="codeFileSelect"></select>
+    </div>
+    <div class="viewer" id="viewer">
+      <div class="placeholder">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        <span>Select a replication from the sidebar to view its files</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let manifest = null;
+let currentTask = 'task1';
+let currentRep = null;
+let currentTab = 'pdf';
+let currentCodeFile = null;
+
+async function init() {
+  const resp = await fetch('manifest.json');
+  manifest = await resp.json();
+  renderTaskTabs();
+  renderRepList();
+  document.getElementById('searchInput').addEventListener('input', renderRepList);
+}
+
+function renderTaskTabs() {
+  const container = document.getElementById('taskTabs');
+  container.innerHTML = '';
+  for (const [key, task] of Object.entries(manifest)) {
+    const btn = document.createElement('button');
+    btn.className = 'task-tab' + (key === currentTask ? ' active' : '');
+    btn.textContent = task.name.replace('DACA Results ', '');
+    btn.onclick = () => { currentTask = key; currentRep = null; renderTaskTabs(); renderRepList(); renderFileTabs(); renderViewer(); };
+    container.appendChild(btn);
+  }
+}
+
+function renderRepList() {
+  const container = document.getElementById('repList');
+  const filter = document.getElementById('searchInput').value.toLowerCase();
+  const task = manifest[currentTask];
+  if (!task) { container.innerHTML = '<div class="loading">No data</div>'; return; }
+
+  const reps = Object.values(task.replications)
+    .filter(r => r.folder.toLowerCase().includes(filter) || r.num.includes(filter))
+    .sort((a, b) => parseInt(a.num) - parseInt(b.num));
+
+  container.innerHTML = '';
+  for (const rep of reps) {
+    const div = document.createElement('div');
+    div.className = 'rep-item' + (currentRep === rep.folder ? ' active' : '');
+    const numSpan = `<span class="rep-num">#${rep.num}</span>`;
+    let badges = '';
+    if (rep.pdf) badges += '<span class="badge badge-pdf">PDF</span>';
+    if (rep.log) badges += '<span class="badge badge-log">LOG</span>';
+    if (rep.code.length) badges += '<span class="badge badge-code">' + rep.code.length + ' PY</span>';
+    div.innerHTML = numSpan + '<span class="rep-badges">' + badges + '</span>';
+    div.onclick = () => selectRep(rep);
+    container.appendChild(div);
+  }
+}
+
+function selectRep(rep) {
+  currentRep = rep.folder;
+  currentCodeFile = rep.code.length ? rep.code[0] : null;
+  renderRepList();
+  renderFileTabs();
+  renderViewer();
+}
+
+function getRepData() {
+  if (!currentRep || !manifest[currentTask]) return null;
+  return manifest[currentTask].replications[currentRep] || null;
+}
+
+function renderFileTabs() {
+  const container = document.getElementById('fileTabs');
+  const rep = getRepData();
+  if (!rep) { container.innerHTML = ''; return; }
+
+  const tabs = [];
+  if (rep.pdf) tabs.push({ key: 'pdf', label: 'Report (PDF)' });
+  if (rep.log) tabs.push({ key: 'log', label: 'Run Log' });
+  if (rep.code.length) tabs.push({ key: 'code', label: 'Code' });
+
+  if (!tabs.find(t => t.key === currentTab)) {
+    currentTab = tabs.length ? tabs[0].key : 'pdf';
+  }
+
+  container.innerHTML = '';
+  for (const tab of tabs) {
+    const btn = document.createElement('button');
+    btn.className = 'file-tab' + (tab.key === currentTab ? ' active' : '');
+    btn.textContent = tab.label;
+    btn.onclick = () => { currentTab = tab.key; renderFileTabs(); renderViewer(); };
+    container.appendChild(btn);
+  }
+}
+
+function dataUrl(taskName, repFolder, fileName) {
+  return 'data/' + encodeURIComponent(taskName) + '/' + encodeURIComponent(repFolder) + '/' + encodeURIComponent(fileName);
+}
+
+async function renderViewer() {
+  const viewer = document.getElementById('viewer');
+  const codeSelector = document.getElementById('codeSelector');
+  const rep = getRepData();
+  codeSelector.style.display = 'none';
+
+  if (!rep) {
+    viewer.innerHTML = '<div class="placeholder"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>Select a replication from the sidebar to view its files</span></div>';
+    return;
+  }
+
+  const taskName = manifest[currentTask].name;
+
+  if (currentTab === 'pdf' && rep.pdf) {
+    const url = dataUrl(taskName, rep.folder, rep.pdf);
+    viewer.innerHTML = '<iframe src="' + url + '"></iframe>';
+  } else if (currentTab === 'log' && rep.log) {
+    const url = dataUrl(taskName, rep.folder, rep.log);
+    viewer.innerHTML = '<div class="loading">Loading log...</div>';
+    try {
+      const resp = await fetch(url);
+      const text = await resp.text();
+      viewer.innerHTML = '<pre></pre>';
+      viewer.querySelector('pre').textContent = text;
+    } catch (e) {
+      viewer.innerHTML = '<div class="placeholder"><span>Failed to load log file</span></div>';
+    }
+  } else if (currentTab === 'code' && rep.code.length) {
+    codeSelector.style.display = 'flex';
+    const select = document.getElementById('codeFileSelect');
+    select.innerHTML = '';
+    for (const f of rep.code) {
+      const opt = document.createElement('option');
+      opt.value = f; opt.textContent = f;
+      if (f === currentCodeFile) opt.selected = true;
+      select.appendChild(opt);
+    }
+    select.onchange = () => { currentCodeFile = select.value; loadCodeFile(taskName, rep); };
+    if (!currentCodeFile || !rep.code.includes(currentCodeFile)) {
+      currentCodeFile = rep.code[0];
+    }
+    await loadCodeFile(taskName, rep);
+  } else {
+    viewer.innerHTML = '<div class="placeholder"><span>File not available for this replication</span></div>';
+  }
+}
+
+async function loadCodeFile(taskName, rep) {
+  const viewer = document.getElementById('viewer');
+  const url = dataUrl(taskName, rep.folder, currentCodeFile);
+  viewer.innerHTML = '<div class="loading">Loading code...</div>';
+  try {
+    const resp = await fetch(url);
+    const text = await resp.text();
+    viewer.innerHTML = '<pre></pre>';
+    const pre = viewer.querySelector('pre');
+    pre.textContent = text;
+    pre.style.background = '#1e1e2e';
+    pre.style.color = '#cdd6f4';
+  } catch (e) {
+    viewer.innerHTML = '<div class="placeholder"><span>Failed to load code file</span></div>';
+  }
+}
+
+init();
+</script>
+</body>
+</html>
