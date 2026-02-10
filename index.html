@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DACA Replication Results</title>
+<link rel="stylesheet" href="hljs-theme.min.css">
+<script src="highlight.min.js"></script>
+<script src="python.min.js"></script>
 <style>
   :root {
     --bg: #f5f6fa;
@@ -28,14 +31,35 @@
   }
   header {
     background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 16px 24px; position: sticky; top: 0; z-index: 100;
+    padding: 14px 24px; z-index: 100;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   }
-  header h1 { font-size: 20px; font-weight: 700; }
+  .header-top {
+    display: flex; align-items: flex-start; gap: 20px;
+  }
+  .header-text { flex: 1; min-width: 0; }
+  .header-banner {
+    margin: -14px -24px 12px -24px;
+  }
+  .header-banner img {
+    width: 100%; display: block;
+  }
+  .header-title h1 { font-size: 22px; font-weight: 700; white-space: nowrap; }
+  header .subtitle { font-size: 13px; color: var(--text2); margin-top: 4px; line-height: 1.6; }
+  header .subtitle a { color: var(--accent1); text-decoration: underline; text-underline-offset: 2px; }
+  header .subtitle a:hover { color: #1d4ed8; }
+  .guide-row {
+    margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--text2); line-height: 1.55;
+  }
+  .guide-row .inline-badge {
+    font-size: 9px; padding: 1px 5px; border-radius: 8px;
+    font-weight: 600; text-transform: uppercase; vertical-align: 1px;
+  }
   header p { font-size: 13px; color: var(--text2); margin-top: 2px; }
-  .layout { display: flex; height: calc(100vh - 73px); }
+  .layout { display: flex; height: calc(100vh - 165px); }
   .sidebar {
-    width: 300px; min-width: 260px; background: var(--surface);
+    width: 380px; min-width: 340px; background: var(--surface);
     border-right: 1px solid var(--border); display: flex; flex-direction: column;
     overflow: hidden;
   }
@@ -48,14 +72,22 @@
   }
   .task-tab:hover { background: var(--hover); }
   .task-tab.active { color: var(--accent1); border-bottom-color: var(--accent1); }
-  .search-box {
+  .sidebar-toolbar {
     padding: 8px 12px; border-bottom: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 6px;
   }
-  .search-box input {
+  .sidebar-toolbar input {
     width: 100%; padding: 7px 10px; border: 1px solid var(--border);
     border-radius: var(--radius); font-size: 13px; outline: none;
   }
-  .search-box input:focus { border-color: var(--accent1); }
+  .sidebar-toolbar input:focus { border-color: var(--accent1); }
+  .sidebar-toolbar .sort-row {
+    display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2);
+  }
+  .sidebar-toolbar .sort-row select {
+    flex: 1; padding: 4px 6px; border: 1px solid var(--border);
+    border-radius: 4px; font-size: 12px; background: white; color: var(--text);
+  }
   .rep-list {
     flex: 1; overflow-y: auto; padding: 4px 0;
   }
@@ -67,6 +99,7 @@
   .rep-item:hover { background: var(--hover); }
   .rep-item.active { background: var(--active); border-left-color: var(--accent1); }
   .rep-item .rep-num { font-weight: 600; min-width: 32px; }
+  .rep-item .rep-est { font-size: 12px; color: var(--text2); font-family: 'Consolas', 'Monaco', monospace; min-width: 52px; text-align: right; }
   .rep-item .rep-badges { display: flex; gap: 4px; margin-left: auto; }
   .badge {
     font-size: 10px; padding: 1px 6px; border-radius: 10px;
@@ -75,6 +108,23 @@
   .badge-pdf { background: var(--accent1-bg); color: var(--accent1); }
   .badge-log { background: var(--accent2-bg); color: var(--accent2); }
   .badge-code { background: var(--accent3-bg); color: var(--accent3); }
+  .badge-bug { background: #fef2f2; color: #dc2626; }
+  .badge-recovered { background: #fffbeb; color: #d97706; }
+
+  .code-line-bug {
+    background: rgba(220, 38, 38, 0.3);
+    display: block;
+    margin: 0 -20px;
+    padding: 0 20px;
+    border-left: 3px solid #f87171;
+  }
+  .bug-banner {
+    padding: 8px 16px;
+    background: #fef2f2;
+    border-bottom: 1px solid #fecaca;
+    color: #991b1b;
+    font-size: 13px;
+  }
 
   .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
   .file-tabs {
@@ -105,6 +155,8 @@
     font-size: 13px; line-height: 1.6; font-family: 'Consolas', 'Monaco', monospace;
     white-space: pre-wrap; word-wrap: break-word; background: #fafbfc;
   }
+  .viewer pre.hljs-pre { background: #0d1117; color: #e6edf3; }
+  .viewer pre.hljs-pre code.hljs { background: transparent; padding: 0; }
   .viewer .placeholder {
     display: flex; align-items: center; justify-content: center;
     height: 100%; color: var(--text2); font-size: 15px; flex-direction: column; gap: 8px;
@@ -129,14 +181,45 @@
 </head>
 <body>
 <header>
-  <h1>DACA Replication Results</h1>
-  <p>Browse replication reports, run logs, and analysis code across 3 tasks (100 replications each)</p>
+  <div class="header-top">
+    <div class="header-text">
+      <div class="header-banner">
+        <img src="screenshot3.png" alt="Claude Code prompt: Do my job please! Make no mistakes.">
+      </div>
+      <h1>Claude Code Economist</h1>
+      <p class="subtitle">
+        Companion data for <a href="data/paper.pdf"><em>Claude Code as an Empirical Economist</em></a>.
+        100 independent Claude Code replications for each of three causal-inference tasks from
+        <a href="https://www.nber.org/papers/w33729" target="_blank" rel="noopener">Huntington-Klein et al. (2025)</a>.
+      </p>
+    </div>
+  </div>
+  <div class="guide-row">
+    Select a task, then click a replication to browse its report, run log, and code.
+    The value next to each rep (e.g. +2.6pp) is the preferred DiD point estimate; use the Sort dropdown to rank.
+    Badges:
+    <span class="inline-badge" style="background:#eff6ff;color:#2563eb;">PDF</span> report,
+    <span class="inline-badge" style="background:#ecfdf5;color:#059669;">LOG</span> run log,
+    <span class="inline-badge" style="background:#f5f3ff;color:#7c3aed;">N PY</span> number of Python code files,
+    <span class="inline-badge" style="background:#fef2f2;color:#dc2626;">BUG</span> verified coding error affecting the estimate (10 of 300),
+    <span class="inline-badge" style="background:#fffbeb;color:#d97706;">RECOVERED</span> code recovered from the run log (19 of 300).
+  </div>
 </header>
 <div class="layout">
   <div class="sidebar">
     <div class="task-tabs" id="taskTabs"></div>
-    <div class="search-box">
+    <div class="sidebar-toolbar">
       <input type="text" id="searchInput" placeholder="Filter replications...">
+      <div class="sort-row">
+        <label>Sort:</label>
+        <select id="sortSelect">
+          <option value="num">Rep # (asc)</option>
+          <option value="num-desc">Rep # (desc)</option>
+          <option value="est-asc">Estimate (asc)</option>
+          <option value="est-desc">Estimate (desc)</option>
+          <option value="est-abs">|Estimate| (desc)</option>
+        </select>
+      </div>
     </div>
     <div class="rep-list" id="repList">
       <div class="loading">Loading...</div>
@@ -166,6 +249,7 @@ let currentTask = 'task1';
 let currentRep = null;
 let currentTab = 'pdf';
 let currentCodeFile = null;
+let currentSort = 'num';
 
 async function init() {
   const resp = await fetch('manifest.json');
@@ -173,6 +257,8 @@ async function init() {
   renderTaskTabs();
   renderRepList();
   document.getElementById('searchInput').addEventListener('input', renderRepList);
+  const sortSelect = document.getElementById('sortSelect');
+  sortSelect.addEventListener('change', () => { currentSort = sortSelect.value; renderRepList(); });
 }
 
 function renderTaskTabs() {
@@ -194,19 +280,33 @@ function renderRepList() {
   if (!task) { container.innerHTML = '<div class="loading">No data</div>'; return; }
 
   const reps = Object.values(task.replications)
-    .filter(r => r.folder.toLowerCase().includes(filter) || r.num.includes(filter))
-    .sort((a, b) => parseInt(a.num) - parseInt(b.num));
+    .filter(r => r.folder.toLowerCase().includes(filter) || r.num.includes(filter));
+
+  // Sort
+  const sortFns = {
+    'num':      (a, b) => parseInt(a.num) - parseInt(b.num),
+    'num-desc': (a, b) => parseInt(b.num) - parseInt(a.num),
+    'est-asc':  (a, b) => (a.est ?? 0) - (b.est ?? 0),
+    'est-desc': (a, b) => (b.est ?? 0) - (a.est ?? 0),
+    'est-abs':  (a, b) => Math.abs(b.est ?? 0) - Math.abs(a.est ?? 0),
+  };
+  reps.sort(sortFns[currentSort] || sortFns['num']);
 
   container.innerHTML = '';
   for (const rep of reps) {
     const div = document.createElement('div');
     div.className = 'rep-item' + (currentRep === rep.folder ? ' active' : '');
     const numSpan = `<span class="rep-num">#${rep.num}</span>`;
+    const estSpan = rep.est != null
+      ? `<span class="rep-est">${rep.est >= 0 ? '+' : ''}${(rep.est * 100).toFixed(1)}pp</span>`
+      : '';
     let badges = '';
+    if (rep.bug) badges += '<span class="badge badge-bug">BUG</span>';
+    if (rep.recovered) badges += '<span class="badge badge-recovered">RECOVERED</span>';
     if (rep.pdf) badges += '<span class="badge badge-pdf">PDF</span>';
     if (rep.log) badges += '<span class="badge badge-log">LOG</span>';
     if (rep.code.length) badges += '<span class="badge badge-code">' + rep.code.length + ' PY</span>';
-    div.innerHTML = numSpan + '<span class="rep-badges">' + badges + '</span>';
+    div.innerHTML = numSpan + estSpan + '<span class="rep-badges">' + badges + '</span>';
     div.onclick = () => selectRep(rep);
     container.appendChild(div);
   }
@@ -300,6 +400,10 @@ async function renderViewer() {
   }
 }
 
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 async function loadCodeFile(taskName, rep) {
   const viewer = document.getElementById('viewer');
   const url = dataUrl(taskName, rep.folder, currentCodeFile);
@@ -307,13 +411,40 @@ async function loadCodeFile(taskName, rep) {
   try {
     const resp = await fetch(url);
     const text = await resp.text();
-    viewer.innerHTML = '<pre></pre>';
-    const pre = viewer.querySelector('pre');
-    pre.textContent = text;
-    pre.style.background = '#1e1e2e';
-    pre.style.color = '#cdd6f4';
+
+    const bugLines = (rep.bug && rep.bug.file === currentCodeFile) ? rep.bug.lines : [];
+
+    // Try syntax highlighting, fall back to plain text
+    let highlighted;
+    const canHighlight = typeof hljs !== 'undefined';
+    if (canHighlight) {
+      highlighted = hljs.highlight(text, { language: 'python' }).value;
+    }
+
+    if (bugLines.length > 0) {
+      const lines = canHighlight ? highlighted.split('\n') : text.split('\n');
+      let banner = '<div class="bug-banner">\u26a0 This file contains a coding error: ' +
+                   escapeHtml(rep.bug.desc) + '</div>';
+      let codeHtml = '';
+      lines.forEach((line, i) => {
+        const lineNum = i + 1;
+        const content = canHighlight ? line : escapeHtml(line);
+        if (bugLines.includes(lineNum)) {
+          codeHtml += '<span class="code-line-bug">' + content + '</span>\n';
+        } else {
+          codeHtml += content + '\n';
+        }
+      });
+      viewer.innerHTML = banner + '<pre class="hljs-pre"><code class="hljs language-python">' + codeHtml + '</code></pre>';
+    } else if (canHighlight) {
+      viewer.innerHTML = '<pre class="hljs-pre"><code class="hljs language-python">' + highlighted + '</code></pre>';
+    } else {
+      // Fallback: plain text
+      viewer.innerHTML = '<pre class="hljs-pre"></pre>';
+      viewer.querySelector('pre').textContent = text;
+    }
   } catch (e) {
-    viewer.innerHTML = '<div class="placeholder"><span>Failed to load code file</span></div>';
+    viewer.innerHTML = '<div class="placeholder"><span>Failed to load code file: ' + escapeHtml(e.message) + '</span></div>';
   }
 }
 
